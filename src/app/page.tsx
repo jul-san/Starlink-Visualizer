@@ -132,7 +132,7 @@ export default function Page() {
       );
 
       // Fetch TLE + metadata
-      const json = await fetch("https://api.spacexdata.com/v4/starlink").then(
+      const json: any[] = await fetch("https://api.spacexdata.com/v4/starlink").then(
         (r) => r.json()
       );
 
@@ -215,7 +215,7 @@ export default function Page() {
         depthWrite: false,
       });
       const satSprite = new THREE.Sprite(spriteMat);
-      satSprite.scale.set(12, 12, 1);
+      satSprite.scale.set(7, 7, 1);
       satSprite.visible = false;
       scene.add(satSprite);
 
