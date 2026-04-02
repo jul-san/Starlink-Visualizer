@@ -71,6 +71,7 @@ export default function Page() {
   const liveDataRef = useRef<LiveData | null>(null);
   const pausedRef = useRef(false);
   const autoRotatingRef = useRef(true);
+  const versionFilterRef = useRef<string>("all");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,6 +82,7 @@ export default function Page() {
   const [selectedSat, setSelectedSat] = useState<SatCard | null>(null);
   const [liveData, setLiveData] = useState<LiveData | null>(null);
   const [paused, setPaused] = useState(false);
+  const [versionFilter, setVersionFilter] = useState("all");
 
   function handlePauseToggle() {
     const next = !pausedRef.current;
@@ -282,7 +284,11 @@ export default function Page() {
             d.lat = d.lng = d.alt = d.altKm = d.speed = NaN;
           }
 
-          const valid = !isNaN(d.lat) && !isNaN(d.lng);
+          const vf = versionFilterRef.current;
+          const valid =
+            !isNaN(d.lat) &&
+            !isNaN(d.lng) &&
+            (vf === "all" || d.version === vf);
           const v = valid ? satToVec(d.lat, d.lng) : new THREE.Vector3();
           allPositions[i * 3] = v.x;
           allPositions[i * 3 + 1] = v.y;
@@ -405,7 +411,7 @@ export default function Page() {
       {/* Live telemetry */}
       <div className="p-4 border-b border-gray-800">
         <h3 className="text-green-400 text-xs font-semibold uppercase tracking-widest mb-3">
-          Live Telemetry
+          Position
         </h3>
         <div className="space-y-2.5">
           <Row
@@ -516,6 +522,28 @@ export default function Page() {
         >
           ⟳ Reset View
         </button>
+
+        {/* Version filter */}
+        {satCards.length > 0 && (
+          <select
+            value={versionFilter}
+            onChange={(e) => {
+              setVersionFilter(e.target.value);
+              versionFilterRef.current = e.target.value;
+            }}
+            className="ml-2 px-3 py-1.5 text-xs rounded border bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700 transition-colors cursor-pointer focus:outline-none focus:border-gray-500"
+          >
+            <option value="all">All Versions</option>
+            {[...new Set(satCards.map((s) => s.version))]
+              .filter(Boolean)
+              .sort()
+              .map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+          </select>
+        )}
       </nav>
 
       {/* Globe + detail panel (side-by-side on desktop, stacked on mobile) */}
@@ -533,7 +561,7 @@ export default function Page() {
 
       {/* Satellite cards row */}
       <div
-        className="h-44 shrink-0 border-t border-gray-800 bg-gray-950 flex items-center gap-3 px-4 py-3 overflow-x-auto"
+        className="h-44 shrink-0 border-t border-gray-800 bg-gray-950 flex items-center gap-3 px-4 py-3 overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full"
         onMouseLeave={() => {
           // Only reset when leaving the section entirely and no satellite is selected
           if (!selectedSatRef.current) {
@@ -545,7 +573,9 @@ export default function Page() {
         {satCards.length === 0 ? (
           <p className="text-gray-500 text-sm">Loading satellites…</p>
         ) : (
-          satCards.map((sat) => (
+          satCards
+            .filter((s) => versionFilter === "all" || s.version === versionFilter)
+            .map((sat) => (
             <div
               key={sat.name}
               onClick={() => selectSat(sat)}
