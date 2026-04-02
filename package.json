@@ -12,6 +12,9 @@
     "next": "16.0.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "satellite": "^0.0.1",
+    "satellite.js": "^6.0.1",
+    "three": "^0.181.2",
     "three-globe": "^2.45.0"
   },
   "devDependencies": {
@@ -19,6 +22,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.181.0",
+    "baseline-browser-mapping": "^2.8.32",
     "eslint": "^9",
     "eslint-config-next": "16.0.4",
     "tailwindcss": "^4",
