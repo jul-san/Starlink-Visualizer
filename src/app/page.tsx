@@ -4,13 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
 const VERSION_COLORS: Record<string, string> = {
-  "v0.9":      "#3b82f6", // blue
-  "v1.0":      "#a855f7", // purple
-  "v1.5":      "#f97316", // orange
-  "v2.0 Mini": "#22d3ee", // cyan
-  "v2 Mini":   "#22d3ee", // cyan  (alternate API label)
-  "v2.0":      "#4ade80", // green
-  "v2":        "#4ade80", // green (alternate API label)
+  "v1.0": "#a855f7", // purple
+  "v1.5": "#f97316", // orange
 };
 const DEFAULT_VERSION_COLOR = "#ffffff"; // white for unknown / v?
 
@@ -80,7 +75,6 @@ export default function Page() {
   const containerRef = useRef<HTMLDivElement>(null);
   const timeRef = useRef<HTMLDivElement>(null);
 
-  // Animation loop refs — readable by Three.js without triggering re-renders
   const hoveredSatRef = useRef<string | null>(null);
   const selectedSatRef = useRef<string | null>(null);
   const liveDataRef = useRef<LiveData | null>(null);
@@ -144,12 +138,9 @@ export default function Page() {
         );
       }
 
-      // Globe imagery
-      const Globe = new ThreeGlobe().globeImageUrl(
-        "//cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg"
-      );
+      const Globe = new ThreeGlobe().globeImageUrl("//cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg");
 
-      // Fetch TLE + metadata
+      // fetch tle + metadata
       const json: any[] = await fetch("https://api.spacexdata.com/v4/starlink").then(
         (r) => r.json()
       );
@@ -203,7 +194,6 @@ export default function Page() {
         )
       );
 
-      // Renderer
       renderer = new THREE.WebGLRenderer({ antialias: true });
       const width = containerRef.current!.clientWidth;
       const height = containerRef.current!.clientHeight;
@@ -211,13 +201,11 @@ export default function Page() {
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
       containerRef.current!.appendChild(renderer.domElement);
 
-      // Scene
       const scene = new THREE.Scene();
       scene.add(Globe as unknown as THREE.Object3D);
       scene.add(new THREE.AmbientLight(0xcccccc, Math.PI));
       scene.add(new THREE.DirectionalLight(0xffffff, 0.6 * Math.PI));
 
-      // Starfield — random points on a large sphere surrounding the scene
       const STAR_COUNT = 6000;
       const starPositions = new Float32Array(STAR_COUNT * 3);
       for (let i = 0; i < STAR_COUNT; i++) {
@@ -239,8 +227,6 @@ export default function Page() {
       });
       scene.add(new THREE.Points(starGeo, starMat));
 
-      // All-satellite point cloud — positions updated in-place each frame,
-      // colors set once at load time based on version.
       const allPositions = new Float32Array(satData.length * 3);
       const allColors   = new Float32Array(satData.length * 3);
       satData.forEach((d, i) => {
@@ -256,7 +242,6 @@ export default function Page() {
       const allPoints = new THREE.Points(allGeo, allMat);
       scene.add(allPoints);
 
-      // Focused satellite — billboard sprite using the sat-icon texture
       const satTexture = new THREE.TextureLoader().load("/sat-icon.png");
       const spriteMat = new THREE.SpriteMaterial({
         map: satTexture,
@@ -268,14 +253,12 @@ export default function Page() {
       satSprite.visible = false;
       scene.add(satSprite);
 
-      // Camera
       const camera = new THREE.PerspectiveCamera();
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       camera.position.z = 400;
       cameraRef.current = camera;
 
-      // Resize — ResizeObserver reacts to panel appearing/disappearing too
       function onResize() {
         const w = containerRef.current?.clientWidth || window.innerWidth;
         const h = containerRef.current?.clientHeight || window.innerHeight;
@@ -288,14 +271,12 @@ export default function Page() {
       ro.observe(containerRef.current!);
       cleanupResize = () => ro.disconnect();
 
-      // Controls
       const controls = new TrackballControls(camera, renderer.domElement);
       controls.minDistance = 101;
       controls.rotateSpeed = 5;
       controls.zoomSpeed = 0.8;
       controlsRef.current = controls;
 
-      // Stop auto-rotate the first time the user drags
       controls.addEventListener("start", () => {
         autoRotatingRef.current = false;
       });
@@ -305,7 +286,6 @@ export default function Page() {
       function updateFrame() {
         animationFrame = requestAnimationFrame(updateFrame);
 
-        // Advance simulation time only when not paused
         if (!pausedRef.current) {
           time = new Date(+time + TIME_STEP);
         }
@@ -342,7 +322,6 @@ export default function Page() {
         });
         allGeo.attributes.position.needsUpdate = true;
 
-        // Publish live data for detail panel
         const selName = selectedSatRef.current;
         if (selName) {
           const s = satData.find((d) => d.name === selName && !isNaN(d.lat));
@@ -355,12 +334,9 @@ export default function Page() {
             };
         }
 
-        // Hovered card takes priority; fall back to selected satellite so
-        // tracking continues when the mouse moves into the globe area.
         const focused = hoveredSatRef.current ?? selectedSatRef.current;
 
         if (focused) {
-          // Isolate satellite + smooth camera follow
           const s = satData.find(
             (d) => d.name === focused && !isNaN(d.lat) && !isNaN(d.lng)
           );
@@ -381,7 +357,6 @@ export default function Page() {
           satSprite.visible = false;
           controls.enabled = true;
 
-          // Auto-rotate on initial load (until user drags or hovers)
           if (autoRotatingRef.current) {
             const a = AUTO_ROTATE_SPEED;
             const x = camera.position.x;
@@ -435,7 +410,8 @@ export default function Page() {
 
   const detailPanel = selectedSat && (
     <div className="shrink-0 h-64 md:h-auto md:w-96 bg-gray-950 border-t md:border-t-0 md:border-l border-gray-800 flex flex-col overflow-y-auto">
-      {/* Header */}
+      
+      {/* header */}
       <div className="flex items-start justify-between p-4 border-b border-gray-800 sticky top-0 bg-gray-950 z-10">
         <div>
           <h2 className="text-white font-bold text-sm">{selectedSat.name}</h2>
@@ -487,7 +463,7 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Orbital elements */}
+      {/* orbital stuff */}
       <div className="p-4 border-b border-gray-800">
         <h3 className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">
           Orbital Elements
@@ -510,7 +486,7 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Identity */}
+      {/* identity */}
       <div className="p-4">
         <h3 className="text-purple-400 text-xs font-semibold uppercase tracking-widest mb-3">
           Identity
@@ -541,7 +517,7 @@ export default function Page() {
 
   return (
     <div className="flex flex-col h-screen bg-black">
-      {/* Nav bar */}
+      {/* navbar */}
       <nav className="shrink-0 flex items-center gap-3 px-4 h-12 bg-gray-950/90 backdrop-blur border-b border-gray-800 z-20">
         <span className="text-white font-bold text-sm tracking-wide mr-2">
           Starlink Observer
@@ -566,7 +542,6 @@ export default function Page() {
           ⟳ Reset View
         </button>
 
-        {/* Version filter — custom dropdown with color indicators */}
         {satCards.length > 0 && (
           <div className="relative ml-2">
             <button
@@ -583,10 +558,8 @@ export default function Page() {
 
             {versionDropdownOpen && (
               <>
-                {/* Click-away backdrop */}
                 <div className="fixed inset-0 z-40" onClick={() => setVersionDropdownOpen(false)} />
                 <div className="absolute top-full mt-1 left-0 z-50 min-w-[140px] rounded border border-gray-700 bg-gray-900 shadow-xl overflow-hidden">
-                  {/* "All" option */}
                   <button
                     onClick={() => { setVersionFilter("all"); versionFilterRef.current = "all"; setVersionDropdownOpen(false); }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-200 hover:bg-gray-800 transition-colors"
@@ -618,7 +591,6 @@ export default function Page() {
         )}
       </nav>
 
-      {/* Globe + detail panel (side-by-side on desktop, stacked on mobile) */}
       <div className="flex flex-1 min-h-0 flex-col md:flex-row">
         <div ref={containerRef} className="relative flex-1 min-w-0 min-h-0">
           <div
@@ -627,15 +599,12 @@ export default function Page() {
           />
         </div>
 
-        {/* On desktop: panel is a column to the right; on mobile: panel is a row below the globe */}
         {detailPanel}
       </div>
 
-      {/* Satellite cards row */}
       <div
         className="h-44 shrink-0 border-t border-gray-800 bg-gray-950 flex items-center gap-3 px-4 py-3 overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full"
         onMouseLeave={() => {
-          // Only reset when leaving the section entirely and no satellite is selected
           if (!selectedSatRef.current) {
             controlsRef.current?.reset();
             autoRotatingRef.current = true;
